@@ -117,3 +117,30 @@ class AdzunaScraper(BaseScraper):
         except Exception as e:
             logger.warning(f"Error parsing Adzuna job: {e}")
             return None
+
+    def search(self, keywords: list[str], locations: list[str]) -> list[Job]:
+        """
+        Override search - use combined query to minimize API calls.
+        """
+        if not self.app_id or not self.app_key:
+            logger.warning("Adzuna API credentials not configured. Skipping.")
+            return []
+
+        all_jobs = []
+        seen_urls = set()
+
+        # Use only key AI terms to minimize API calls
+        priority_keywords = ["artificial intelligence", "machine learning", "AI engineer", "data scientist"]
+
+        for keyword in priority_keywords[:3]:  # Max 3 API calls
+            try:
+                jobs = self.get_jobs(keyword)
+                for job in jobs:
+                    if job.url not in seen_urls:
+                        seen_urls.add(job.url)
+                        all_jobs.append(job)
+            except Exception as e:
+                logger.error(f"Error searching Adzuna for '{keyword}': {e}")
+
+        logger.info(f"{self.name}: Found {len(all_jobs)} unique jobs")
+        return all_jobs
