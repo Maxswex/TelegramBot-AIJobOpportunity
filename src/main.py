@@ -19,6 +19,7 @@ from src.scrapers import (
     RemoteOKScraper,
     AdzunaScraper,
     ArbeitnowScraper,
+    JSearchScraper,
 )
 from src.telegram_bot import TelegramBot
 from src.utils import (
@@ -45,6 +46,7 @@ def collect_jobs() -> list:
     all_jobs = []
 
     scrapers = [
+        JSearchScraper(),    # LinkedIn, Indeed, Glassdoor aggregator (100 req/month free)
         RemoteOKScraper(),   # Public API, no auth - remote tech jobs
         ArbeitnowScraper(),  # Public API, no auth - EU tech jobs
         AdzunaScraper(),     # Free API with key - comprehensive IT jobs
