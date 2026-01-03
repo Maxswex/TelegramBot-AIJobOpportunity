@@ -1,16 +1,12 @@
 from .base import BaseScraper, Job
-from .indeed import IndeedScraper
-from .infojobs import InfoJobsScraper
-from .glassdoor import GlassdoorScraper
-from .monster import MonsterScraper
-from .google_jobs import GoogleJobsScraper
+from .remoteok import RemoteOKScraper
+from .adzuna import AdzunaScraper
+from .arbeitnow import ArbeitnowScraper
 
 __all__ = [
     "BaseScraper",
     "Job",
-    "IndeedScraper",
-    "InfoJobsScraper",
-    "GlassdoorScraper",
-    "MonsterScraper",
-    "GoogleJobsScraper",
+    "RemoteOKScraper",
+    "AdzunaScraper",
+    "ArbeitnowScraper",
 ]

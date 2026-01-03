@@ -16,11 +16,9 @@ sys.path.insert(0, str(project_root))
 
 from config import KEYWORDS, LOCATIONS
 from src.scrapers import (
-    IndeedScraper,
-    InfoJobsScraper,
-    GlassdoorScraper,
-    MonsterScraper,
-    GoogleJobsScraper,
+    RemoteOKScraper,
+    AdzunaScraper,
+    ArbeitnowScraper,
 )
 from src.telegram_bot import TelegramBot
 from src.utils import (
@@ -47,11 +45,9 @@ def collect_jobs() -> list:
     all_jobs = []
 
     scrapers = [
-        IndeedScraper(),
-        InfoJobsScraper(),
-        GlassdoorScraper(),
-        MonsterScraper(),
-        GoogleJobsScraper(),
+        RemoteOKScraper(),   # Public API, no auth - remote tech jobs
+        ArbeitnowScraper(),  # Public API, no auth - EU tech jobs
+        AdzunaScraper(),     # Free API with key - comprehensive IT jobs
     ]
 
     for scraper in scrapers:
