@@ -170,15 +170,24 @@ def is_european_location(location: str) -> bool:
 
     location_lower = location.lower().strip()
 
-    # Check for remote - always include
-    for remote_kw in REMOTE_KEYWORDS:
-        if remote_kw in location_lower:
-            return True
-
-    # Check for European location
+    # Check for European location first
     for eu_location in EUROPEAN_COUNTRIES:
         if eu_location in location_lower:
             return True
+
+    # Check for remote WITH European context (e.g., "Remote - Europe", "EU Remote")
+    is_remote = any(remote_kw in location_lower for remote_kw in REMOTE_KEYWORDS)
+    if is_remote:
+        # Only include remote if it mentions Europe/EU or has no specific country
+        # Exclude if it mentions non-EU countries
+        non_eu_indicators = ["usa", "us ", "united states", "america", "canada", "asia",
+                            "india", "china", "japan", "australia", "brazil", "mexico",
+                            "singapore", "hong kong", "israel", "uae", "dubai"]
+        for indicator in non_eu_indicators:
+            if indicator in location_lower:
+                return False
+        # Include remote jobs that don't specify a non-EU location
+        return True
 
     return False
 

@@ -156,6 +156,9 @@ class TelegramBot:
         company = self._escape_markdown(job.company) if job.company else "N/D"
         location = self._escape_markdown(job.location) if job.location else "N/D"
 
+        # Escape URL parentheses for Markdown links
+        url = self._escape_url(job.url)
+
         text = f"💼 *{title}*\n"
         text += f"🏢 {company}\n"
         text += f"📍 {location}\n"
@@ -166,7 +169,7 @@ class TelegramBot:
         else:
             text += "💰 Da concordare\n"
 
-        text += f"🔗 [Candidati qui]({job.url})\n\n"
+        text += f"🔗 [Candidati qui]({url})\n\n"
 
         return text
 
@@ -175,12 +178,21 @@ class TelegramBot:
         if not text:
             return ""
 
-        # Only escape characters that break Markdown links and formatting
+        # Only escape characters that break Markdown formatting
         special_chars = ['_', '*', '[', ']', '`']
         for char in special_chars:
             text = text.replace(char, f"\\{char}")
 
         return text
+
+    def _escape_url(self, url: str) -> str:
+        """Escape special characters in URLs for Markdown links."""
+        if not url:
+            return ""
+
+        # Escape parentheses in URLs which break Markdown link syntax
+        url = url.replace('(', '%28').replace(')', '%29')
+        return url
 
 
 def get_chat_id():
