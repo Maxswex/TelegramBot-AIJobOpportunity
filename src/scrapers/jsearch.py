@@ -165,5 +165,19 @@ class JSearchScraper(BaseScraper):
                 except Exception as e:
                     logger.error(f"Error searching JSearch for '{keyword}': {e}")
 
+        # Log breakdown by source
+        source_counts = {}
+        for job in all_jobs:
+            # Extract publisher from source (e.g., "JSearch (LinkedIn)" -> "LinkedIn")
+            source = job.source
+            if "(" in source and ")" in source:
+                publisher = source.split("(")[1].split(")")[0]
+            else:
+                publisher = "Unknown"
+            source_counts[publisher] = source_counts.get(publisher, 0) + 1
+
         logger.info(f"{self.name}: Found {len(all_jobs)} unique jobs")
+        for publisher, count in sorted(source_counts.items(), key=lambda x: -x[1]):
+            logger.info(f"  └─ {publisher}: {count} jobs")
+
         return all_jobs
