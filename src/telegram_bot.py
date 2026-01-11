@@ -7,6 +7,7 @@ import requests
 import sys
 sys.path.insert(0, "/Users/maxswex/ai-job-alerts")
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+from src.utils import is_italian_location, is_remote_location
 
 logger = logging.getLogger(__name__)
 
@@ -73,49 +74,96 @@ class TelegramBot:
         message = f"*AI Job Alert - {today}*\n\n_Nessuna nuova offerta trovata oggi._"
         return self.send_message(message)
 
+    def _group_jobs_by_region(self, jobs: list) -> dict:
+        """Group jobs into Italy, Europe, and Remote categories."""
+        grouped = {
+            "italy": [],
+            "europe": [],
+            "remote": [],
+        }
+
+        for job in jobs:
+            location = job.location or ""
+            if is_italian_location(location):
+                grouped["italy"].append(job)
+            elif is_remote_location(location):
+                grouped["remote"].append(job)
+            else:
+                grouped["europe"].append(job)
+
+        return grouped
+
     def _format_jobs_messages(self, jobs: list) -> list[str]:
-        """Format jobs into Telegram messages, splitting if too long."""
+        """Format jobs into Telegram messages with geographic sections."""
         today = datetime.now().strftime("%d %b %Y")
-        header = f"*AI Job Alert - {today}*\n\n"
-        footer = f"\n\n_Trovati {len(jobs)} nuovi annunci oggi_"
+        header = f"🔔 *AI Job Alert* \\| {today}\n\n"
+
+        grouped = self._group_jobs_by_region(jobs)
 
         messages = []
         current_message = header
 
-        for job in jobs:
-            job_text = self._format_job(job)
+        # Section headers
+        sections = [
+            ("italy", "━━━━━━━━━━━━━━━━━━━━━\n🇮🇹 *ITALIA*\n━━━━━━━━━━━━━━━━━━━━━\n\n"),
+            ("europe", "━━━━━━━━━━━━━━━━━━━━━\n🇪🇺 *EUROPA*\n━━━━━━━━━━━━━━━━━━━━━\n\n"),
+            ("remote", "━━━━━━━━━━━━━━━━━━━━━\n🌍 *REMOTE*\n━━━━━━━━━━━━━━━━━━━━━\n\n"),
+        ]
 
-            # Check if adding this job would exceed limit
-            if len(current_message) + len(job_text) + len(footer) > MAX_MESSAGE_LENGTH - 100:
-                # Finalize current message and start new one
-                current_message += footer
+        for section_key, section_header in sections:
+            section_jobs = grouped[section_key]
+            if not section_jobs:
+                continue
+
+            # Check if we need to add section header
+            if len(current_message) + len(section_header) > MAX_MESSAGE_LENGTH - 200:
                 messages.append(current_message)
-                current_message = f"*AI Job Alert (continua...)*\n\n{job_text}"
-            else:
-                current_message += job_text
+                current_message = f"🔔 *AI Job Alert \\(continua\\.\\.\\.\\.\\)*\n\n"
 
-        # Add final message
-        current_message += footer
+            current_message += section_header
+
+            for job in section_jobs:
+                job_text = self._format_job(job)
+
+                # Check if adding this job would exceed limit
+                if len(current_message) + len(job_text) > MAX_MESSAGE_LENGTH - 100:
+                    messages.append(current_message)
+                    current_message = f"🔔 *AI Job Alert \\(continua\\.\\.\\.\\.\\)*\n\n{job_text}"
+                else:
+                    current_message += job_text
+
+        # Add footer
+        footer = f"\n━━━━━━━━━━━━━━━━━━━━━\n📊 *Trovati {len(jobs)} nuovi annunci*"
+        if len(current_message) + len(footer) > MAX_MESSAGE_LENGTH:
+            messages.append(current_message)
+            current_message = footer
+        else:
+            current_message += footer
+
         messages.append(current_message)
 
         return messages
 
     def _format_job(self, job) -> str:
-        """Format single job for Telegram message."""
+        """Format single job as a card for Telegram message."""
         # Escape markdown special characters in text fields
         title = self._escape_markdown(job.title)
         company = self._escape_markdown(job.company) if job.company else "N/D"
         location = self._escape_markdown(job.location) if job.location else "N/D"
 
-        text = f"*{title}*\n"
-        text += f"_{company}_ - {location}\n"
+        text = "┌─────────────────────┐\n"
+        text += f"│ 💼 *{title}*\n"
+        text += f"│ 🏢 {company}\n"
+        text += f"│ 📍 {location}\n"
 
         if job.salary:
             salary = self._escape_markdown(job.salary)
-            text += f"Salario: {salary}\n"
+            text += f"│ 💰 {salary}\n"
+        else:
+            text += "│ 💰 Da concordare\n"
 
-        text += f"[Vedi annuncio]({job.url})\n"
-        text += f"Fonte: {job.source}\n\n"
+        text += f"│ 🔗 [Candidati →]({job.url})\n"
+        text += "└─────────────────────┘\n\n"
 
         return text
 

@@ -4,8 +4,9 @@ import os
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
-# Search keywords for AI jobs
+# Search keywords for AI jobs and developers
 KEYWORDS = [
+    # AI/ML
     "artificial intelligence",
     "machine learning",
     "deep learning",
@@ -17,6 +18,17 @@ KEYWORDS = [
     "LLM",
     "prompt engineer",
     "intelligenza artificiale",
+    # Sviluppatori
+    "sviluppatore app",
+    "app developer",
+    "mobile developer",
+    "iOS developer",
+    "Android developer",
+    "sviluppatore siti web",
+    "web developer",
+    "frontend developer",
+    "backend developer",
+    "full stack developer",
 ]
 
 # Location filters (Italy focused)

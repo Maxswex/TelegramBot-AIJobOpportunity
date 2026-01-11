@@ -11,6 +11,99 @@ from config import SEEN_JOBS_FILE
 
 logger = logging.getLogger(__name__)
 
+# European countries (EU-27 + UK + Switzerland) with common variations
+EUROPEAN_COUNTRIES = {
+    # Austria
+    "austria", "osterreich", "vienna", "wien", "salzburg", "graz", "linz",
+    # Belgium
+    "belgium", "belgique", "belgie", "brussels", "bruxelles", "antwerp", "ghent",
+    # Bulgaria
+    "bulgaria", "sofia", "plovdiv", "varna",
+    # Croatia
+    "croatia", "hrvatska", "zagreb", "split", "rijeka",
+    # Cyprus
+    "cyprus", "nicosia", "limassol",
+    # Czech Republic
+    "czech republic", "czechia", "cesko", "prague", "praha", "brno",
+    # Denmark
+    "denmark", "danmark", "copenhagen", "kobenhavn", "aarhus",
+    # Estonia
+    "estonia", "eesti", "tallinn", "tartu",
+    # Finland
+    "finland", "suomi", "helsinki", "espoo", "tampere",
+    # France
+    "france", "paris", "lyon", "marseille", "toulouse", "nice", "nantes", "strasbourg", "bordeaux", "lille",
+    # Germany
+    "germany", "deutschland", "berlin", "munich", "munchen", "frankfurt", "hamburg", "cologne", "koln", "dusseldorf", "stuttgart", "leipzig", "dresden",
+    # Greece
+    "greece", "hellas", "ellada", "athens", "athina", "thessaloniki",
+    # Hungary
+    "hungary", "magyarorszag", "budapest", "debrecen",
+    # Ireland
+    "ireland", "dublin", "cork", "galway", "limerick",
+    # Italy
+    "italy", "italia", "italian", "milan", "milano", "rome", "roma", "turin", "torino", "florence", "firenze",
+    "naples", "napoli", "bologna", "genoa", "genova", "venice", "venezia", "verona", "padova", "padua",
+    "bari", "palermo", "catania", "trieste", "brescia", "parma", "modena", "reggio emilia", "bergamo", "monza",
+    "rimini", "perugia", "cagliari", "trento", "bolzano", "lombardia", "lombardy", "lazio", "piemonte", "piedmont",
+    "toscana", "tuscany", "emilia-romagna", "emilia romagna", "veneto", "campania", "sicilia", "sicily",
+    "puglia", "apulia", "calabria", "sardegna", "sardinia", "liguria", "friuli", "trentino", "marche", "abruzzo", "umbria",
+    # Latvia
+    "latvia", "latvija", "riga",
+    # Lithuania
+    "lithuania", "lietuva", "vilnius", "kaunas",
+    # Luxembourg
+    "luxembourg", "luxemburg",
+    # Malta
+    "malta", "valletta",
+    # Netherlands
+    "netherlands", "nederland", "holland", "amsterdam", "rotterdam", "the hague", "den haag", "utrecht", "eindhoven",
+    # Poland
+    "poland", "polska", "warsaw", "warszawa", "krakow", "wroclaw", "gdansk", "poznan", "lodz", "katowice",
+    # Portugal
+    "portugal", "lisboa", "lisbon", "porto", "oporto", "braga", "coimbra",
+    # Romania
+    "romania", "bucuresti", "bucharest", "cluj", "timisoara", "iasi",
+    # Slovakia
+    "slovakia", "slovensko", "bratislava", "kosice",
+    # Slovenia
+    "slovenia", "slovenija", "ljubljana", "maribor",
+    # Spain
+    "spain", "espana", "madrid", "barcelona", "valencia", "seville", "sevilla", "bilbao", "malaga", "zaragoza",
+    # Sweden
+    "sweden", "sverige", "stockholm", "gothenburg", "goteborg", "malmo", "uppsala",
+    # UK
+    "united kingdom", "uk", "britain", "great britain", "england", "scotland", "wales", "northern ireland",
+    "london", "manchester", "birmingham", "leeds", "glasgow", "edinburgh", "liverpool", "bristol", "sheffield", "newcastle", "nottingham", "cambridge", "oxford",
+    # Switzerland
+    "switzerland", "schweiz", "suisse", "svizzera", "zurich", "zuerich", "geneva", "geneve", "basel", "bern", "lausanne", "lugano",
+    # European identifiers
+    "eu", "europe", "european", "emea",
+}
+
+# Italian locations for priority sorting
+ITALIAN_LOCATIONS = {
+    # Country
+    "italy", "italia", "italian",
+    # Major cities
+    "milan", "milano", "rome", "roma", "turin", "torino", "florence", "firenze",
+    "naples", "napoli", "bologna", "genoa", "genova", "venice", "venezia",
+    "verona", "padova", "padua", "bari", "palermo", "catania", "trieste",
+    "brescia", "parma", "modena", "reggio emilia", "bergamo", "monza",
+    "rimini", "perugia", "cagliari", "trento", "bolzano",
+    # Regions
+    "lombardia", "lombardy", "lazio", "piemonte", "piedmont", "toscana", "tuscany",
+    "emilia-romagna", "emilia romagna", "veneto", "campania", "sicilia", "sicily",
+    "puglia", "apulia", "calabria", "sardegna", "sardinia", "liguria",
+    "friuli-venezia giulia", "friuli", "trentino-alto adige", "trentino",
+    "marche", "abruzzo", "umbria", "basilicata", "molise", "valle d'aosta",
+}
+
+# Remote work keywords
+REMOTE_KEYWORDS = {
+    "remote", "remoto", "anywhere", "worldwide", "global", "work from home", "wfh", "telelavoro", "full remote", "fully remote",
+}
+
 
 def get_project_root() -> Path:
     """Get the project root directory."""
@@ -68,3 +161,103 @@ def deduplicate_jobs(jobs: list) -> list:
 
     logger.info(f"Deduplicated {len(jobs)} jobs to {len(unique_jobs)} unique jobs")
     return unique_jobs
+
+
+def is_european_location(location: str) -> bool:
+    """Check if a location string indicates a European location."""
+    if not location:
+        return False
+
+    location_lower = location.lower().strip()
+
+    # Check for remote - always include
+    for remote_kw in REMOTE_KEYWORDS:
+        if remote_kw in location_lower:
+            return True
+
+    # Check for European location
+    for eu_location in EUROPEAN_COUNTRIES:
+        if eu_location in location_lower:
+            return True
+
+    return False
+
+
+def is_italian_location(location: str) -> bool:
+    """Check if a location string indicates an Italian location."""
+    if not location:
+        return False
+
+    location_lower = location.lower().strip()
+
+    for italian_loc in ITALIAN_LOCATIONS:
+        if italian_loc in location_lower:
+            return True
+
+    return False
+
+
+def is_remote_location(location: str) -> bool:
+    """Check if a location string indicates a remote position."""
+    if not location:
+        return False
+
+    location_lower = location.lower().strip()
+
+    for remote_kw in REMOTE_KEYWORDS:
+        if remote_kw in location_lower:
+            return True
+
+    return False
+
+
+def filter_european_jobs(jobs: list) -> list:
+    """Filter jobs to include only those in Europe (EU-27 + UK + Switzerland) or Remote."""
+    european_jobs = [job for job in jobs if is_european_location(job.location)]
+
+    excluded_count = len(jobs) - len(european_jobs)
+    logger.info(f"European filter: kept {len(european_jobs)} jobs, excluded {excluded_count} non-European")
+
+    return european_jobs
+
+
+def get_location_priority(job) -> int:
+    """
+    Get sorting priority for a job based on location.
+
+    Priority:
+        0 - Italian jobs (highest priority, shown first) - includes Italian remote
+        1 - Other European jobs
+        2 - Remote jobs (non-Italian, shown last)
+    """
+    location = job.location or ""
+
+    # Check Italian first (even if also marked as remote)
+    if is_italian_location(location):
+        return 0
+
+    # Remote jobs last (only if not Italian)
+    if is_remote_location(location):
+        return 2
+
+    # Other European jobs in the middle
+    return 1
+
+
+def sort_jobs_by_location_priority(jobs: list) -> list:
+    """
+    Sort jobs by location priority:
+    1. Italian jobs first (including Italian remote)
+    2. Other European jobs second
+    3. Remote jobs last (non-Italian)
+    """
+    sorted_jobs = sorted(jobs, key=get_location_priority)
+
+    # Log distribution for debugging
+    italian_count = sum(1 for j in jobs if get_location_priority(j) == 0)
+    european_count = sum(1 for j in jobs if get_location_priority(j) == 1)
+    remote_count = sum(1 for j in jobs if get_location_priority(j) == 2)
+
+    logger.info(f"Location sort: {italian_count} Italian, {european_count} EU, {remote_count} Remote")
+
+    return sorted_jobs

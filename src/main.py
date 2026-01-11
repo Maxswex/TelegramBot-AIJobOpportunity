@@ -27,6 +27,8 @@ from src.utils import (
     save_seen_jobs,
     filter_new_jobs,
     deduplicate_jobs,
+    filter_european_jobs,
+    sort_jobs_by_location_priority,
 )
 
 # Configure logging
@@ -80,14 +82,20 @@ def main():
     # 3. Deduplicate
     unique_jobs = deduplicate_jobs(all_jobs)
 
-    # 4. Filter out already seen jobs
-    new_jobs = filter_new_jobs(unique_jobs, seen_ids)
+    # 4. Filter to European jobs only
+    european_jobs = filter_european_jobs(unique_jobs)
+
+    # 5. Filter out already seen jobs
+    new_jobs = filter_new_jobs(european_jobs, seen_ids)
     logger.info(f"New jobs to send: {len(new_jobs)}")
 
-    # 5. Send via Telegram
+    # 6. Sort by location priority (Italy first, then EU, then Remote)
+    sorted_jobs = sort_jobs_by_location_priority(new_jobs)
+
+    # 7. Send via Telegram
     try:
         bot = TelegramBot()
-        success = bot.send_job_alert(new_jobs)
+        success = bot.send_job_alert(sorted_jobs)
 
         if success:
             logger.info("Telegram message sent successfully")
