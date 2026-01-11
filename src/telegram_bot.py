@@ -155,6 +155,7 @@ class TelegramBot:
         title = self._escape_html(job.title)
         company = self._escape_html(job.company) if job.company else "N/D"
         location = self._escape_html(job.location) if job.location else "N/D"
+        source = self._escape_html(job.source) if job.source else "N/D"
 
         text = f"💼 <b>{title}</b>\n"
         text += f"🏢 {company}\n"
@@ -166,6 +167,7 @@ class TelegramBot:
         else:
             text += "💰 Da concordare\n"
 
+        text += f"📢 <i>{source}</i>\n"
         text += f'🔗 <a href="{job.url}">Candidati qui</a>\n\n'
 
         return text
