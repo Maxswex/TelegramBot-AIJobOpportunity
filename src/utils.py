@@ -192,63 +192,16 @@ def is_european_location(location: str) -> bool:
     return False
 
 
-# Non-EU indicators to check in job title and description
-NON_EU_INDICATORS = [
-    # Countries
-    "usa", "u.s.a", "united states", "america", "canada", "india", "china", "japan",
-    "australia", "brazil", "mexico", "singapore", "hong kong", "israel", "uae", "dubai",
-    # US States and cities
-    "california", "new york", "texas", "florida", "washington", "massachusetts",
-    "san francisco", "los angeles", "seattle", "boston", "chicago", "austin", "denver",
-    "pittsburgh", "atlanta", "miami", "phoenix", "portland", "san diego", "san jose",
-    "raleigh", "charlotte", "nashville", "detroit", "minneapolis", "philadelphia",
-    # State abbreviations (with comma to avoid false positives)
-    ", ca", ", ny", ", tx", ", fl", ", wa", ", ma", ", il", ", co", ", nc", ", ga",
-    ", az", ", or", ", pa", ", oh", ", mi", ", mn", ", va", ", nj", ", md",
-]
-
-
-def is_non_eu_job(job) -> bool:
-    """Check if a job appears to be from a non-EU country based on title, location, and salary."""
-    # Combine all text fields to check
-    text_to_check = " ".join([
-        (job.title or "").lower(),
-        (job.location or "").lower(),
-        (job.company or "").lower(),
-        (job.description or "").lower(),
-    ])
-
-    # Check for non-EU indicators
-    for indicator in NON_EU_INDICATORS:
-        if indicator in text_to_check:
-            return True
-
-    # Check for USD salary (strong indicator of US job)
-    if job.salary:
-        salary_lower = job.salary.lower()
-        if "$" in job.salary or "usd" in salary_lower:
-            return True
-
-    return False
-
-
 def filter_european_jobs(jobs: list) -> list:
-    """Filter jobs to include only those in Europe (EU-27 + UK + Switzerland)."""
+    """Filter jobs to include only those in Europe (EU-27 + UK + Switzerland) or Remote."""
     european_jobs = []
 
     for job in jobs:
-        # First check: location must be European or generic remote
-        if not is_european_location(job.location):
-            continue
-
-        # Second check: exclude if job has non-EU indicators in title/description
-        if is_non_eu_job(job):
-            continue
-
-        european_jobs.append(job)
+        if is_european_location(job.location):
+            european_jobs.append(job)
 
     excluded_count = len(jobs) - len(european_jobs)
-    logger.info(f"European filter: kept {len(european_jobs)} jobs, excluded {excluded_count} non-European")
+    logger.info(f"European filter: kept {len(european_jobs)} jobs, excluded {excluded_count}")
 
     return european_jobs
 

@@ -26,6 +26,8 @@ from src.telegram_bot import TelegramBot
 from src.utils import (
     deduplicate_jobs,
     filter_european_jobs,
+    is_italian_location,
+    is_remote_location,
 )
 
 # Configure logging
@@ -79,18 +81,32 @@ def main():
     european_jobs = filter_european_jobs(unique_jobs)
     logger.info(f"European jobs to send: {len(european_jobs)}")
 
-    # 4. Sort by date (newest first)
-    def get_sort_date(job):
-        """Get a comparable date, handling timezone-aware and naive datetimes."""
-        if not job.posted_date:
-            return datetime.min
-        # Convert to naive datetime for comparison
-        if job.posted_date.tzinfo is not None:
-            return job.posted_date.replace(tzinfo=None)
-        return job.posted_date
+    # 4. Sort by date (newest first), then by location (Italy first)
+    def get_sort_key(job):
+        """Get sort key: (date_priority, location_priority)."""
+        # Date priority (negative timestamp so newer = smaller = first)
+        if job.posted_date:
+            if job.posted_date.tzinfo is not None:
+                date_val = job.posted_date.replace(tzinfo=None)
+            else:
+                date_val = job.posted_date
+            date_priority = -date_val.timestamp()
+        else:
+            date_priority = 0  # Jobs without date go after dated ones
 
-    sorted_jobs = sorted(european_jobs, key=get_sort_date, reverse=True)
-    logger.info(f"Jobs sorted by date (newest first)")
+        # Location priority: 0=Italy, 1=EU, 2=Remote
+        location = job.location or ""
+        if is_italian_location(location):
+            location_priority = 0
+        elif is_remote_location(location):
+            location_priority = 2
+        else:
+            location_priority = 1
+
+        return (date_priority, location_priority)
+
+    sorted_jobs = sorted(european_jobs, key=get_sort_key)
+    logger.info(f"Jobs sorted by date (newest first), then location (Italy first)")
 
     # 5. Send via Telegram
     try:

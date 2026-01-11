@@ -147,12 +147,21 @@ class JSearchScraper(BaseScraper):
         all_jobs = []
         seen_urls = set()
 
-        # Combine AI-related keywords to reduce API calls
-        # Use only the most important keywords
-        priority_keywords = ["AI engineer", "machine learning", "data scientist AI", "LLM"]
+        # AI-related keywords for comprehensive search
+        priority_keywords = [
+            "artificial intelligence",
+            "machine learning",
+            "AI engineer",
+            "data scientist",
+            "deep learning",
+            "LLM",
+            "GenAI",
+            "NLP engineer",
+            "computer vision",
+        ]
 
-        # Use only main locations
-        priority_locations = ["Italia", "Remote"]
+        # Locations to search
+        priority_locations = ["Italy", "Europe", "Remote"]
 
         for keyword in priority_keywords:
             for location in priority_locations:
