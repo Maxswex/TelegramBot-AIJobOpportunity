@@ -52,6 +52,11 @@ class TelegramBot:
 
         except requests.RequestException as e:
             logger.error(f"Failed to send Telegram message: {e}")
+            # Log response text for debugging
+            try:
+                logger.error(f"Response: {response.text}")
+            except:
+                pass
             return False
 
     def send_job_alert(self, jobs: list) -> bool:
@@ -96,18 +101,18 @@ class TelegramBot:
     def _format_jobs_messages(self, jobs: list) -> list[str]:
         """Format jobs into Telegram messages with geographic sections."""
         today = datetime.now().strftime("%d %b %Y")
-        header = f"🔔 *AI Job Alert* \\| {today}\n\n"
+        header = f"🔔 *AI Job Alert* | {today}\n\n"
 
         grouped = self._group_jobs_by_region(jobs)
 
         messages = []
         current_message = header
 
-        # Section headers
+        # Section headers (using simple dashes for compatibility)
         sections = [
-            ("italy", "━━━━━━━━━━━━━━━━━━━━━\n🇮🇹 *ITALIA*\n━━━━━━━━━━━━━━━━━━━━━\n\n"),
-            ("europe", "━━━━━━━━━━━━━━━━━━━━━\n🇪🇺 *EUROPA*\n━━━━━━━━━━━━━━━━━━━━━\n\n"),
-            ("remote", "━━━━━━━━━━━━━━━━━━━━━\n🌍 *REMOTE*\n━━━━━━━━━━━━━━━━━━━━━\n\n"),
+            ("italy", "──────────────────\n🇮🇹 *ITALIA*\n──────────────────\n\n"),
+            ("europe", "──────────────────\n🇪🇺 *EUROPA*\n──────────────────\n\n"),
+            ("remote", "──────────────────\n🌍 *REMOTE*\n──────────────────\n\n"),
         ]
 
         for section_key, section_header in sections:
@@ -118,7 +123,7 @@ class TelegramBot:
             # Check if we need to add section header
             if len(current_message) + len(section_header) > MAX_MESSAGE_LENGTH - 200:
                 messages.append(current_message)
-                current_message = f"🔔 *AI Job Alert \\(continua\\.\\.\\.\\.\\)*\n\n"
+                current_message = "🔔 *AI Job Alert (continua)*\n\n"
 
             current_message += section_header
 
@@ -128,12 +133,12 @@ class TelegramBot:
                 # Check if adding this job would exceed limit
                 if len(current_message) + len(job_text) > MAX_MESSAGE_LENGTH - 100:
                     messages.append(current_message)
-                    current_message = f"🔔 *AI Job Alert \\(continua\\.\\.\\.\\.\\)*\n\n{job_text}"
+                    current_message = f"🔔 *AI Job Alert (continua)*\n\n{job_text}"
                 else:
                     current_message += job_text
 
         # Add footer
-        footer = f"\n━━━━━━━━━━━━━━━━━━━━━\n📊 *Trovati {len(jobs)} nuovi annunci*"
+        footer = f"\n──────────────────\n📊 *Trovati {len(jobs)} nuovi annunci*"
         if len(current_message) + len(footer) > MAX_MESSAGE_LENGTH:
             messages.append(current_message)
             current_message = footer
@@ -151,28 +156,27 @@ class TelegramBot:
         company = self._escape_markdown(job.company) if job.company else "N/D"
         location = self._escape_markdown(job.location) if job.location else "N/D"
 
-        text = "┌─────────────────────┐\n"
-        text += f"│ 💼 *{title}*\n"
-        text += f"│ 🏢 {company}\n"
-        text += f"│ 📍 {location}\n"
+        text = f"💼 *{title}*\n"
+        text += f"🏢 {company}\n"
+        text += f"📍 {location}\n"
 
         if job.salary:
             salary = self._escape_markdown(job.salary)
-            text += f"│ 💰 {salary}\n"
+            text += f"💰 {salary}\n"
         else:
-            text += "│ 💰 Da concordare\n"
+            text += "💰 Da concordare\n"
 
-        text += f"│ 🔗 [Candidati →]({job.url})\n"
-        text += "└─────────────────────┘\n\n"
+        text += f"🔗 [Candidati qui]({job.url})\n\n"
 
         return text
 
     def _escape_markdown(self, text: str) -> str:
-        """Escape Markdown special characters."""
+        """Escape Markdown special characters for Telegram."""
         if not text:
             return ""
 
-        special_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
+        # Only escape characters that break Markdown links and formatting
+        special_chars = ['_', '*', '[', ']', '`']
         for char in special_chars:
             text = text.replace(char, f"\\{char}")
 
