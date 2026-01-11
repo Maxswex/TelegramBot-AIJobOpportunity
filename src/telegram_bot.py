@@ -7,7 +7,6 @@ import requests
 import sys
 sys.path.insert(0, "/Users/maxswex/ai-job-alerts")
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
-from src.utils import is_italian_location, is_remote_location
 
 logger = logging.getLogger(__name__)
 
@@ -79,71 +78,25 @@ class TelegramBot:
         message = f"🔔 <b>AI Job Alert</b> | {today}\n\n<i>Nessuna nuova offerta trovata oggi.</i>"
         return self.send_message(message)
 
-    def _group_jobs_by_region(self, jobs: list) -> dict:
-        """Group jobs into Italy, Europe, and Remote categories."""
-        grouped = {
-            "italy": [],
-            "europe": [],
-            "remote": [],
-        }
-
-        for job in jobs:
-            location = job.location or ""
-            if is_italian_location(location):
-                grouped["italy"].append(job)
-            elif is_remote_location(location):
-                grouped["remote"].append(job)
-            else:
-                grouped["europe"].append(job)
-
-        return grouped
-
     def _format_jobs_messages(self, jobs: list) -> list[str]:
-        """Format jobs into Telegram messages with geographic sections (HTML format)."""
+        """Format jobs into Telegram messages sorted by date (HTML format)."""
         today = datetime.now().strftime("%d %b %Y")
-        header = f"🔔 <b>AI Job Alert</b> | {today}\n\n"
-
-        grouped = self._group_jobs_by_region(jobs)
+        header = f"🔔 <b>AI Job Alert</b> | {today}\n"
+        header += f"📋 <b>{len(jobs)} annunci</b> (ordinati per data)\n"
+        header += "──────────────────\n\n"
 
         messages = []
         current_message = header
 
-        # Section headers
-        sections = [
-            ("italy", "──────────────────\n🇮🇹 <b>ITALIA</b>\n──────────────────\n\n"),
-            ("europe", "──────────────────\n🇪🇺 <b>EUROPA</b>\n──────────────────\n\n"),
-            ("remote", "──────────────────\n🌍 <b>REMOTE</b>\n──────────────────\n\n"),
-        ]
+        for job in jobs:
+            job_text = self._format_job(job)
 
-        for section_key, section_header in sections:
-            section_jobs = grouped[section_key]
-            if not section_jobs:
-                continue
-
-            # Check if we need to add section header
-            if len(current_message) + len(section_header) > MAX_MESSAGE_LENGTH - 200:
+            # Check if adding this job would exceed limit
+            if len(current_message) + len(job_text) > MAX_MESSAGE_LENGTH - 100:
                 messages.append(current_message)
-                current_message = "🔔 <b>AI Job Alert (continua)</b>\n\n"
-
-            current_message += section_header
-
-            for job in section_jobs:
-                job_text = self._format_job(job)
-
-                # Check if adding this job would exceed limit
-                if len(current_message) + len(job_text) > MAX_MESSAGE_LENGTH - 100:
-                    messages.append(current_message)
-                    current_message = f"🔔 <b>AI Job Alert (continua)</b>\n\n{job_text}"
-                else:
-                    current_message += job_text
-
-        # Add footer
-        footer = f"\n──────────────────\n📊 <b>Trovati {len(jobs)} nuovi annunci</b>"
-        if len(current_message) + len(footer) > MAX_MESSAGE_LENGTH:
-            messages.append(current_message)
-            current_message = footer
-        else:
-            current_message += footer
+                current_message = f"🔔 <b>AI Job Alert (continua)</b>\n──────────────────\n\n{job_text}"
+            else:
+                current_message += job_text
 
         messages.append(current_message)
 
@@ -157,9 +110,16 @@ class TelegramBot:
         location = self._escape_html(job.location) if job.location else "N/D"
         source = self._escape_html(job.source) if job.source else "N/D"
 
+        # Format date
+        if job.posted_date:
+            date_str = job.posted_date.strftime("%d %b %Y")
+        else:
+            date_str = "N/D"
+
         text = f"💼 <b>{title}</b>\n"
         text += f"🏢 {company}\n"
         text += f"📍 {location}\n"
+        text += f"📅 {date_str}\n"
 
         if job.salary:
             salary = self._escape_html(job.salary)

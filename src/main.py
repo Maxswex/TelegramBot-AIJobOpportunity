@@ -8,6 +8,7 @@ a daily summary via Telegram.
 
 import logging
 import sys
+from datetime import datetime
 from pathlib import Path
 
 # Add project root to path
@@ -23,12 +24,8 @@ from src.scrapers import (
 )
 from src.telegram_bot import TelegramBot
 from src.utils import (
-    load_seen_jobs,
-    save_seen_jobs,
-    filter_new_jobs,
     deduplicate_jobs,
     filter_european_jobs,
-    sort_jobs_by_location_priority,
 )
 
 # Configure logging
@@ -71,39 +68,32 @@ def main():
     """Main execution flow."""
     logger.info("Starting AI Job Alerts...")
 
-    # 1. Load previously seen jobs
-    seen_ids = load_seen_jobs()
-    logger.info(f"Loaded {len(seen_ids)} previously seen job IDs")
-
-    # 2. Collect jobs from all sources
+    # 1. Collect jobs from all sources
     all_jobs = collect_jobs()
     logger.info(f"Total jobs collected: {len(all_jobs)}")
 
-    # 3. Deduplicate
+    # 2. Deduplicate
     unique_jobs = deduplicate_jobs(all_jobs)
 
-    # 4. Filter to European jobs only
+    # 3. Filter to European jobs only
     european_jobs = filter_european_jobs(unique_jobs)
+    logger.info(f"European jobs to send: {len(european_jobs)}")
 
-    # 5. Filter out already seen jobs
-    new_jobs = filter_new_jobs(european_jobs, seen_ids)
-    logger.info(f"New jobs to send: {len(new_jobs)}")
+    # 4. Sort by date (newest first)
+    sorted_jobs = sorted(
+        european_jobs,
+        key=lambda j: j.posted_date if j.posted_date else datetime.min,
+        reverse=True  # Newest first
+    )
+    logger.info(f"Jobs sorted by date (newest first)")
 
-    # 6. Sort by location priority (Italy first, then EU, then Remote)
-    sorted_jobs = sort_jobs_by_location_priority(new_jobs)
-
-    # 7. Send via Telegram
+    # 5. Send via Telegram
     try:
         bot = TelegramBot()
         success = bot.send_job_alert(sorted_jobs)
 
         if success:
             logger.info("Telegram message sent successfully")
-
-            # 6. Update seen jobs
-            new_ids = {job.id for job in new_jobs}
-            all_seen_ids = seen_ids | new_ids
-            save_seen_jobs(all_seen_ids)
         else:
             logger.error("Failed to send Telegram message")
             sys.exit(1)
