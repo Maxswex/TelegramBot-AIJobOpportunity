@@ -192,18 +192,80 @@ def is_european_location(location: str) -> bool:
     return False
 
 
+# AI-related keywords that must appear in job title
+AI_KEYWORDS = [
+    "ai", "artificial intelligence", "machine learning", "ml", "deep learning",
+    "data scientist", "data science", "nlp", "natural language", "computer vision",
+    "neural network", "llm", "gpt", "genai", "generative ai", "prompt engineer",
+    "ml engineer", "ai engineer", "intelligenza artificiale",
+]
+
+# Non-EU locations to exclude (even if they contain EU city names)
+NON_EU_LOCATIONS = [
+    "texas", "stati uniti", "united states", "usa", "u.s.a", "america",
+    "california", "new york", "florida", "washington", "canada",
+    "india", "china", "japan", "australia", "brazil", "mexico",
+    "singapore", "hong kong", "israel",
+]
+
+
+def is_ai_job(job) -> bool:
+    """Check if job title contains AI-related keywords."""
+    title_lower = (job.title or "").lower()
+
+    for keyword in AI_KEYWORDS:
+        if keyword in title_lower:
+            return True
+
+    return False
+
+
+def has_non_eu_location(job) -> bool:
+    """Check if job location contains non-EU indicators."""
+    location_lower = (job.location or "").lower()
+
+    for indicator in NON_EU_LOCATIONS:
+        if indicator in location_lower:
+            return True
+
+    # Check for USD salary (strong indicator of US job)
+    if job.salary and ("$" in job.salary or "usd" in job.salary.lower()):
+        return True
+
+    return False
+
+
 def filter_european_jobs(jobs: list) -> list:
-    """Filter jobs to include only those in Europe (EU-27 + UK + Switzerland) or Remote."""
-    european_jobs = []
+    """Filter jobs to include only AI jobs in Europe."""
+    filtered_jobs = []
+    excluded_not_ai = 0
+    excluded_non_eu = 0
+    excluded_location = 0
 
     for job in jobs:
-        if is_european_location(job.location):
-            european_jobs.append(job)
+        # Must be AI-related
+        if not is_ai_job(job):
+            excluded_not_ai += 1
+            continue
 
-    excluded_count = len(jobs) - len(european_jobs)
-    logger.info(f"European filter: kept {len(european_jobs)} jobs, excluded {excluded_count}")
+        # Must not have non-EU location indicators
+        if has_non_eu_location(job):
+            excluded_non_eu += 1
+            continue
 
-    return european_jobs
+        # Must have European location
+        if not is_european_location(job.location):
+            excluded_location += 1
+            continue
+
+        filtered_jobs.append(job)
+
+    logger.info(f"Filter results: kept {len(filtered_jobs)} jobs")
+    logger.info(f"  └─ Excluded (not AI): {excluded_not_ai}")
+    logger.info(f"  └─ Excluded (non-EU location): {excluded_non_eu}")
+    logger.info(f"  └─ Excluded (no EU location): {excluded_location}")
+
+    return filtered_jobs
 
 
 def is_italian_location(location: str) -> bool:
