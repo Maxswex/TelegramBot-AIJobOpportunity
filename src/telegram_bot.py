@@ -28,7 +28,7 @@ class TelegramBot:
         if not self.chat_id:
             raise ValueError("TELEGRAM_CHAT_ID is required")
 
-    def send_message(self, text: str, parse_mode: str = "Markdown") -> bool:
+    def send_message(self, text: str, parse_mode: str = "HTML") -> bool:
         """Send a text message to the configured chat."""
         url = f"{self.base_url}/sendMessage"
 
@@ -76,7 +76,7 @@ class TelegramBot:
     def _send_no_jobs_message(self) -> bool:
         """Send message when no new jobs found."""
         today = datetime.now().strftime("%d %b %Y")
-        message = f"*AI Job Alert - {today}*\n\n_Nessuna nuova offerta trovata oggi._"
+        message = f"🔔 <b>AI Job Alert</b> | {today}\n\n<i>Nessuna nuova offerta trovata oggi.</i>"
         return self.send_message(message)
 
     def _group_jobs_by_region(self, jobs: list) -> dict:
@@ -99,20 +99,20 @@ class TelegramBot:
         return grouped
 
     def _format_jobs_messages(self, jobs: list) -> list[str]:
-        """Format jobs into Telegram messages with geographic sections."""
+        """Format jobs into Telegram messages with geographic sections (HTML format)."""
         today = datetime.now().strftime("%d %b %Y")
-        header = f"🔔 *AI Job Alert* | {today}\n\n"
+        header = f"🔔 <b>AI Job Alert</b> | {today}\n\n"
 
         grouped = self._group_jobs_by_region(jobs)
 
         messages = []
         current_message = header
 
-        # Section headers (using simple dashes for compatibility)
+        # Section headers
         sections = [
-            ("italy", "──────────────────\n🇮🇹 *ITALIA*\n──────────────────\n\n"),
-            ("europe", "──────────────────\n🇪🇺 *EUROPA*\n──────────────────\n\n"),
-            ("remote", "──────────────────\n🌍 *REMOTE*\n──────────────────\n\n"),
+            ("italy", "──────────────────\n🇮🇹 <b>ITALIA</b>\n──────────────────\n\n"),
+            ("europe", "──────────────────\n🇪🇺 <b>EUROPA</b>\n──────────────────\n\n"),
+            ("remote", "──────────────────\n🌍 <b>REMOTE</b>\n──────────────────\n\n"),
         ]
 
         for section_key, section_header in sections:
@@ -123,7 +123,7 @@ class TelegramBot:
             # Check if we need to add section header
             if len(current_message) + len(section_header) > MAX_MESSAGE_LENGTH - 200:
                 messages.append(current_message)
-                current_message = "🔔 *AI Job Alert (continua)*\n\n"
+                current_message = "🔔 <b>AI Job Alert (continua)</b>\n\n"
 
             current_message += section_header
 
@@ -133,12 +133,12 @@ class TelegramBot:
                 # Check if adding this job would exceed limit
                 if len(current_message) + len(job_text) > MAX_MESSAGE_LENGTH - 100:
                     messages.append(current_message)
-                    current_message = f"🔔 *AI Job Alert (continua)*\n\n{job_text}"
+                    current_message = f"🔔 <b>AI Job Alert (continua)</b>\n\n{job_text}"
                 else:
                     current_message += job_text
 
         # Add footer
-        footer = f"\n──────────────────\n📊 *Trovati {len(jobs)} nuovi annunci*"
+        footer = f"\n──────────────────\n📊 <b>Trovati {len(jobs)} nuovi annunci</b>"
         if len(current_message) + len(footer) > MAX_MESSAGE_LENGTH:
             messages.append(current_message)
             current_message = footer
@@ -150,49 +150,37 @@ class TelegramBot:
         return messages
 
     def _format_job(self, job) -> str:
-        """Format single job as a card for Telegram message."""
-        # Escape markdown special characters in text fields
-        title = self._escape_markdown(job.title)
-        company = self._escape_markdown(job.company) if job.company else "N/D"
-        location = self._escape_markdown(job.location) if job.location else "N/D"
+        """Format single job as a card for Telegram message (HTML format)."""
+        # Escape HTML special characters in text fields
+        title = self._escape_html(job.title)
+        company = self._escape_html(job.company) if job.company else "N/D"
+        location = self._escape_html(job.location) if job.location else "N/D"
 
-        # Escape URL parentheses for Markdown links
-        url = self._escape_url(job.url)
-
-        text = f"💼 *{title}*\n"
+        text = f"💼 <b>{title}</b>\n"
         text += f"🏢 {company}\n"
         text += f"📍 {location}\n"
 
         if job.salary:
-            salary = self._escape_markdown(job.salary)
+            salary = self._escape_html(job.salary)
             text += f"💰 {salary}\n"
         else:
             text += "💰 Da concordare\n"
 
-        text += f"🔗 [Candidati qui]({url})\n\n"
+        text += f'🔗 <a href="{job.url}">Candidati qui</a>\n\n'
 
         return text
 
-    def _escape_markdown(self, text: str) -> str:
-        """Escape Markdown special characters for Telegram."""
+    def _escape_html(self, text: str) -> str:
+        """Escape HTML special characters for Telegram."""
         if not text:
             return ""
 
-        # Only escape characters that break Markdown formatting
-        special_chars = ['_', '*', '[', ']', '`']
-        for char in special_chars:
-            text = text.replace(char, f"\\{char}")
+        # Escape HTML entities
+        text = text.replace('&', '&amp;')
+        text = text.replace('<', '&lt;')
+        text = text.replace('>', '&gt;')
 
         return text
-
-    def _escape_url(self, url: str) -> str:
-        """Escape special characters in URLs for Markdown links."""
-        if not url:
-            return ""
-
-        # Escape parentheses in URLs which break Markdown link syntax
-        url = url.replace('(', '%28').replace(')', '%29')
-        return url
 
 
 def get_chat_id():
