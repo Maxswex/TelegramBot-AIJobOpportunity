@@ -80,11 +80,16 @@ def main():
     logger.info(f"European jobs to send: {len(european_jobs)}")
 
     # 4. Sort by date (newest first)
-    sorted_jobs = sorted(
-        european_jobs,
-        key=lambda j: j.posted_date if j.posted_date else datetime.min,
-        reverse=True  # Newest first
-    )
+    def get_sort_date(job):
+        """Get a comparable date, handling timezone-aware and naive datetimes."""
+        if not job.posted_date:
+            return datetime.min
+        # Convert to naive datetime for comparison
+        if job.posted_date.tzinfo is not None:
+            return job.posted_date.replace(tzinfo=None)
+        return job.posted_date
+
+    sorted_jobs = sorted(european_jobs, key=get_sort_date, reverse=True)
     logger.info(f"Jobs sorted by date (newest first)")
 
     # 5. Send via Telegram
