@@ -3,6 +3,7 @@ from .remoteok import RemoteOKScraper
 from .adzuna import AdzunaScraper
 from .arbeitnow import ArbeitnowScraper
 from .jsearch import JSearchScraper
+from .linkedin import LinkedInScraper
 
 __all__ = [
     "BaseScraper",
@@ -11,4 +12,5 @@ __all__ = [
     "AdzunaScraper",
     "ArbeitnowScraper",
     "JSearchScraper",
+    "LinkedInScraper",
 ]
